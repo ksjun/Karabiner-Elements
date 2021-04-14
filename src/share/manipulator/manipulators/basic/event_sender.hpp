@@ -117,18 +117,27 @@ inline void post_events_at_key_down(const event_queue::entry& front_input_event,
     return;
   }
 
+  event_queue::event event;
   for (auto it = std::begin(to_events); it != std::end(to_events); std::advance(it, 1)) {
-    if (auto event = it->get_event_definition().to_event()) {
+    if (auto to_event = it->get_event_definition().to_event()) {
+      event = *to_event;
       // to_modifier down, to_key down, to_key up, to_modifier up
 
       auto to_modifier_events = it->make_modifier_events();
 
       bool is_modifier_key_event = false;
-      if (auto e = event->get_if<momentary_switch_event>()) {
+      if (auto e = event.get_if<momentary_switch_event>()) {
         if (e->modifier_flag()) {
           is_modifier_key_event = true;
         } else if (e->caps_lock()) {
           is_modifier_key_event = true;
+        }
+        auto usage_pair = e->get_usage_pair();
+        if (usage_pair.get_usage_page() == pqrs::hid::usage_page::keyboard_or_keypad && usage_pair.get_usage() == pqrs::hid::usage::undefined) {
+          event_queue::event orgEvent = front_input_event.get_original_event();
+          if (auto eo = orgEvent.get_if<momentary_switch_event>()) {
+            event = event_queue::event(krbn::momentary_switch_event(eo->get_usage_pair()));
+          }
         }
       }
 
@@ -156,7 +165,7 @@ inline void post_events_at_key_down(const event_queue::entry& front_input_event,
 
         output_event_queue.emplace_back_entry(front_input_event.get_device_id(),
                                               t,
-                                              *event,
+                                              event,
                                               event_type::key_down,
                                               front_input_event.get_original_event(),
                                               event_queue::state::manipulated,
@@ -177,14 +186,14 @@ inline void post_events_at_key_down(const event_queue::entry& front_input_event,
 
         output_event_queue.emplace_back_entry(front_input_event.get_device_id(),
                                               t,
-                                              *event,
+                                              event,
                                               event_type::key_up,
                                               front_input_event.get_original_event(),
                                               event_queue::state::manipulated,
                                               it->get_lazy());
       } else {
         current_manipulated_original_event.get_events_at_key_up().emplace_back_event(front_input_event.get_device_id(),
-                                                                                     *event,
+                                                                                     event,
                                                                                      event_type::key_up,
                                                                                      front_input_event.get_original_event(),
                                                                                      it->get_lazy());
