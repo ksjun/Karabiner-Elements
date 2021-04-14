@@ -5,6 +5,7 @@
 #include "event_queue.hpp"
 #include "logger.hpp"
 #include "manipulator/manipulator_manager.hpp"
+#include "qmk/qmk_preprocessor.h"
 #include <mutex>
 
 namespace krbn {
@@ -105,6 +106,11 @@ public:
 
   void manipulate(absolute_time_point now) const {
     std::lock_guard<std::mutex> lock(connections_mutex_);
+
+    uint64_t now64 = make_milliseconds(absolute_time_duration(type_safe::get(now))).count();
+    if (!qmk_manipulate(now64)) {
+      return;
+    }
 
     for (auto&& c : connections_) {
       c.manipulate(now);
