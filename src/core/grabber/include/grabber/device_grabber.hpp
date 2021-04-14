@@ -22,7 +22,6 @@
 #include "monitor/event_tap_monitor.hpp"
 #include "notification_message_manager.hpp"
 #include "probable_stuck_events_manager.hpp"
-#include "qmk/qmk_manipulator_manager.hpp"
 #include "types.hpp"
 #include <deque>
 #include <fstream>
@@ -52,7 +51,6 @@ public:
     notification_message_manager_ = std::make_shared<notification_message_manager>(
         constants::get_notification_message_file_path());
 
-    qmk_modifications_manipulator_manager_ = std::make_shared<device_grabber_details::qmk_manipulator_manager>();
     simple_modifications_manipulator_manager_ = std::make_shared<device_grabber_details::simple_modifications_manipulator_manager>();
     complex_modifications_manipulator_manager_ = std::make_shared<manipulator::manipulator_manager>();
     fn_function_keys_manipulator_manager_ = std::make_shared<device_grabber_details::fn_function_keys_manipulator_manager>();
@@ -60,8 +58,6 @@ public:
 
     merged_input_event_queue_ = std::make_shared<event_queue::queue>(
         "merged_input_event_queue");
-    qmk_modifications_applied_event_queue_ = std::make_shared<event_queue::queue>(
-        "qmk_modifications_applied_event_queue");
     simple_modifications_applied_event_queue_ = std::make_shared<event_queue::queue>(
         "simple_modifications_applied_event_queue");
     complex_modifications_applied_event_queue_ = std::make_shared<event_queue::queue>(
@@ -182,10 +178,8 @@ public:
 
     // Connect manipulator_managers
 
-    manipulator_managers_connector_.emplace_back_connection(qmk_modifications_manipulator_manager_->get_manipulator_manager(),
-                                                            merged_input_event_queue_,
-                                                            qmk_modifications_applied_event_queue_);
     manipulator_managers_connector_.emplace_back_connection(simple_modifications_manipulator_manager_->get_manipulator_manager(),
+                                                            merged_input_event_queue_,
                                                             simple_modifications_applied_event_queue_);
     manipulator_managers_connector_.emplace_back_connection(complex_modifications_manipulator_manager_,
                                                             complex_modifications_applied_event_queue_);
@@ -380,7 +374,6 @@ public:
 
       post_event_to_virtual_devices_manipulator_ = nullptr;
 
-      qmk_modifications_manipulator_manager_ = nullptr;
       simple_modifications_manipulator_manager_ = nullptr;
       complex_modifications_manipulator_manager_ = nullptr;
       fn_function_keys_manipulator_manager_ = nullptr;
@@ -954,7 +947,6 @@ private:
       hid_manager_->async_start();
     }
 
-    qmk_modifications_manipulator_manager_->update(profile_);
     simple_modifications_manipulator_manager_->update(profile_);
     update_complex_modifications_manipulators();
     fn_function_keys_manipulator_manager_->update(profile_,
@@ -1022,9 +1014,6 @@ private:
   std::shared_ptr<notification_message_manager> notification_message_manager_;
 
   std::shared_ptr<event_queue::queue> merged_input_event_queue_;
-
-  std::shared_ptr<device_grabber_details::qmk_manipulator_manager> qmk_modifications_manipulator_manager_;
-  std::shared_ptr<event_queue::queue> qmk_modifications_applied_event_queue_;
 
   std::shared_ptr<device_grabber_details::simple_modifications_manipulator_manager> simple_modifications_manipulator_manager_;
   std::shared_ptr<event_queue::queue> simple_modifications_applied_event_queue_;

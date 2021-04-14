@@ -22,7 +22,6 @@ targets:
           - -Werror
           - '-std=gnu++2a'
       - path: ../../vendor/cget/src/pqrs/osx/process_info
-      - path: ../../share/qmk
     dependencies:
       - framework: CoreGraphics.framework
       - framework: CoreServices.framework
