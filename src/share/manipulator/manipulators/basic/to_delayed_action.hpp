@@ -58,6 +58,27 @@ public:
           } else {
             throw pqrs::json::unmarshal_error(fmt::format("`{0}` must be object or array, but is `{1}`", key, pqrs::json::dump_for_error_message(value)));
           }
+        } else if (key == "to_if_holding_canceled") {
+          if (value.is_object()) {
+            try {
+              to_if_holding_canceled_ = std::vector<to_event_definition>{
+                  value.get<to_event_definition>(),
+              };
+            } catch (const pqrs::json::unmarshal_error& e) {
+              throw pqrs::json::unmarshal_error(fmt::format("`{0}` error: {1}", key, e.what()));
+            }
+
+          } else if (value.is_array()) {
+            try {
+              to_if_holding_canceled_ = value.get<std::vector<to_event_definition>>();
+            } catch (const pqrs::json::unmarshal_error& e) {
+              throw pqrs::json::unmarshal_error(fmt::format("`{0}` entry error: {1}", key, e.what()));
+            }
+
+          } else {
+            throw pqrs::json::unmarshal_error(fmt::format("`{0}` must be object or array, but is `{1}`", key, pqrs::json::dump_for_error_message(value)));
+          }
+
 
         } else {
           throw pqrs::json::unmarshal_error(fmt::format("unknown key `{0}` in `{1}`", key, pqrs::json::dump_for_error_message(json)));
@@ -91,7 +112,8 @@ public:
     }
 
     if (to_if_invoked_.empty() &&
-        to_if_canceled_.empty()) {
+        to_if_canceled_.empty() &&
+        to_if_holding_canceled_.empty()) {
       return;
     }
 
@@ -122,12 +144,17 @@ public:
 
     ++current_delayed_action_id_;
 
-    post_events(to_if_canceled_);
+    if (current_manipulated_original_event_ && !current_manipulated_original_event_->get_key_up_posted()) {
+      post_events(to_if_holding_canceled_);
+    } else {
+      post_events(to_if_canceled_);
+    }
   }
 
   bool needs_virtual_hid_pointing(void) const {
     for (const auto& events : {to_if_invoked_,
-                               to_if_canceled_}) {
+                               to_if_canceled_,
+                               to_if_holding_canceled_}) {
       if (std::any_of(std::begin(events),
                       std::end(events),
                       [](auto& e) {
@@ -184,6 +211,7 @@ private:
 
   std::vector<to_event_definition> to_if_invoked_;
   std::vector<to_event_definition> to_if_canceled_;
+  std::vector<to_event_definition> to_if_holding_canceled_;
   std::optional<event_queue::entry> front_input_event_;
   std::shared_ptr<manipulated_original_event::manipulated_original_event> current_manipulated_original_event_;
   std::weak_ptr<event_queue::queue> output_event_queue_;
